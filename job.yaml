@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pytorch-ddp-job
+spec:
+  ttlSecondsAfterFinished: null  # Keeps the job and pod around after completion
+  backoffLimit: 1
+  template:
+    spec:
+      containers:
+      - name: pytorch-ddp
+        env:
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: all
+        image: 600413481647.dkr.ecr.us-west-2.amazonaws.com/pytorch-ddp-test:example
+        resources:
+          limits:
+            nvidia.com/gpu: "4"
+          requests:
+            nvidia.com/gpu: "4"
+        volumeMounts:
+        # Shared memory for comms within nodes.
+        - mountPath: /dev/shm
+          name: shm
+        imagePullPolicy: Always
+      volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi  # 1GB is sufficient for this example
+      restartPolicy: Never
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+      nodeSelector:
+        launch: Karpenter
